@@ -214,7 +214,11 @@ gboolean
 gst_core_audio_get_samples_and_latency (GstCoreAudio * core_audio,
     gdouble rate, guint * samples, gdouble * latency)
 {
+#ifndef HAVE_IOS
+  uint64_t now_ns = 0;
+#else
   uint64_t now_ns = AudioConvertHostTimeToNanos (AudioGetCurrentHostTime ());
+#endif
   gboolean ret = gst_core_audio_get_samples_and_latency_impl (core_audio, rate,
       samples, latency);
 
@@ -224,8 +228,13 @@ gst_core_audio_get_samples_and_latency (GstCoreAudio * core_audio,
   CORE_AUDIO_TIMING_LOCK (core_audio);
 
   uint32_t samples_remain = 0;
-  uint64_t anchor_ns =
+#ifndef HAVE_IOS
+
+    uint64_t anchor_ns = core_audio->anchor_hosttime;
+#else
+    uint64_t anchor_ns =
       AudioConvertHostTimeToNanos (core_audio->anchor_hosttime);
+#endif
 
   if (core_audio->is_src) {
     int64_t captured_ns =
@@ -299,7 +308,11 @@ gst_core_audio_update_timing (GstCoreAudio * core_audio,
     GST_DEBUG_OBJECT (core_audio,
         "anchor hosttime_ns %" G_GUINT64_FORMAT
         " scalar_rate %f anchor_pend_samples %u",
-        AudioConvertHostTimeToNanos (core_audio->anchor_hosttime),
+                      #ifndef HAVE_IOS
+                              core_audio->anchor_hosttime,
+#else
+            AudioConvertHostTimeToNanos (core_audio->anchor_hosttime),
+#endif
         core_audio->rate_scalar, core_audio->anchor_pend_samples);
   }
 }
